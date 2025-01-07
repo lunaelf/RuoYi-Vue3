@@ -21,7 +21,7 @@ RUN chown -R node:node /usr/src/app
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=yarn.lock,target=yarn.lock \
     --mount=type=cache,target=/root/.yarn \
-    yarn install --frozen-lockfile --registry=https://registry.npmmirror.com
+    yarn install --frozen-lockfile
 
 # Run the application as a non-root user.
 USER node
