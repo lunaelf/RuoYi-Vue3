@@ -28,6 +28,28 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           target: final
-          tags: crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com/${{ vars.DOCKER_REGISTRY_USERNAME }}/ruoyi-vue3:latest
+          tags: crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ vars.DOCKER_REPOSITORY_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "${{ secrets.DOCKER_REGISTRY_PASSWORD }}" | docker login --username ${{ vars.DOCKER_REGISTRY_USERNAME }} --password-stdin crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com
+            docker pull crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ vars.DOCKER_REPOSITORY_NAME }}:latest
+            docker rm -f ${{ vars.DOCKER_REPOSITORY_NAME }}
+            docker run -d \
+              --name frontend \
+              --label "traefik.http.routers.frontend.rule=Host(\`${{ secrets.SSH_HOST }}\`) \
+              --label "traefik.http.services.frontend.loadbalancer.server.port=3000" \
+              --network traefik-network \
+              crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ vars.DOCKER_REPOSITORY_NAME }}:latest
