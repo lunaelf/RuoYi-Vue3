@@ -29,3 +29,5 @@ jobs:
           push: true
           target: final
           tags: crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com/${{ vars.DOCKER_REGISTRY_USERNAME }}/ruoyi-vue3:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
