@@ -46,7 +46,9 @@ jobs:
           script: |
             echo "${{ secrets.DOCKER_REGISTRY_PASSWORD }}" | docker login --username ${{ vars.DOCKER_REGISTRY_USERNAME }} --password-stdin crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com
             docker pull crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ vars.DOCKER_REPOSITORY_NAME }}:latest
-            docker rm -f ${{ vars.DOCKER_REPOSITORY_NAME }}
+            if [ "$(docker inspect -f '{{.State.Running}}' frontend)" = "true" ]; then
+              docker rm -f frontend
+            fi
             docker run -d \
               --name frontend \
               --label "traefik.http.routers.frontend.rule=Host(\`${{ secrets.SSH_HOST }}\`) \
