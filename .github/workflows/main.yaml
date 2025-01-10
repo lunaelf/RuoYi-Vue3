@@ -1,4 +1,4 @@
-name: ci
+name: CI/CD
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
             fi
             docker run -d \
               --name frontend \
-              --label "traefik.http.routers.frontend.rule=Host(\`${{ secrets.SSH_HOST }}\`) \
+              --label "traefik.http.routers.frontend.rule=Host(\`${{ secrets.SSH_HOST }}\`)" \
               --label "traefik.http.services.frontend.loadbalancer.server.port=3000" \
               --network traefik-network \
               crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ vars.DOCKER_REPOSITORY_NAME }}:latest
