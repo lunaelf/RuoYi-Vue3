@@ -5,12 +5,13 @@ on:
     branches:
       - "containerize"
     tags:
-      - "v*"
+      - "v*.*.*"
   pull_request:
     branches:
       - "containerize"
 
 env:
+  DOCKER_REGISTRY: crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com
   DOCKER_REPOSITORY_NAME: ruoyi-vue3
   FRONTEND_NAME: frontend
   FRONTEND_PORT: 3000
@@ -18,6 +19,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,17 +29,19 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ secrets.DOCKER_REGISTRY }}/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ env.DOCKER_REPOSITORY_NAME }}
+            ${{ env.DOCKER_REGISTRY }}/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ env.DOCKER_REPOSITORY_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
       - name: Login to Docker Container Registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.DOCKER_REGISTRY }}
+          registry: ${{ env.DOCKER_REGISTRY }}
           username: ${{ vars.DOCKER_REGISTRY_USERNAME }}
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       - name: Set up Docker Buildx
@@ -61,7 +66,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Extract tag
+        id: extract_tag
+        run: echo "tag=$(echo '${{ needs.build.outputs.tags }}' | grep -oP '\d+\.\d+\.\d+' || echo '')" >> $GITHUB_OUTPUT
+      - name: Check tag format
+        id: check_tag
+        run: |
+          if [[ "${{ steps.extract_tag.outputs.tag }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_semver=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_semver=false" >> $GITHUB_OUTPUT
+          fi
       - name: Deploy to server
+        if: steps.check_tag.outputs.is_semver == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -69,9 +86,9 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "${{ secrets.DOCKER_REGISTRY_PASSWORD }}" | docker login --username ${{ vars.DOCKER_REGISTRY_USERNAME }} --password-stdin ${{ secrets.DOCKER_REGISTRY }}
-            docker pull ${{ secrets.DOCKER_REGISTRY }}/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ env.DOCKER_REPOSITORY_NAME }}:latest
-            if [ "$(docker inspect -f '{{.State.Running}}' ${{ env.FRONTEND_NAME }})" = "true" ]; then
+            echo "${{ secrets.DOCKER_REGISTRY_PASSWORD }}" | docker login --username ${{ vars.DOCKER_REGISTRY_USERNAME }} --password-stdin ${{ env.DOCKER_REGISTRY }}
+            docker pull ${{ env.DOCKER_REGISTRY }}/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ env.DOCKER_REPOSITORY_NAME }}:${{ steps.extract_tag.outputs.tag }}
+            if [ "$(docker inspect -f '{{.State.Running}}' ${{ env.FRONTEND_NAME }})" = 'true' ]; then
               docker rm -f ${{ env.FRONTEND_NAME }}
             fi
             docker run -d \
@@ -79,4 +96,4 @@ jobs:
               --label "traefik.http.routers.${{ env.FRONTEND_NAME }}.rule=Host(\`${{ secrets.SSH_HOST }}\`)" \
               --label "traefik.http.services.${{ env.FRONTEND_NAME }}.loadbalancer.server.port=${{ env.FRONTEND_PORT }}" \
               --network traefik-network \
-              ${{ secrets.DOCKER_REGISTRY }}/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ env.DOCKER_REPOSITORY_NAME }}:latest
+              ${{ env.DOCKER_REGISTRY }}/${{ vars.DOCKER_REGISTRY_USERNAME }}/${{ env.DOCKER_REPOSITORY_NAME }}:${{ steps.extract_tag.outputs.tag }}
