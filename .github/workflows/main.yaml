@@ -95,6 +95,8 @@ jobs:
             fi
             docker run -d \
               --name ${{ env.FRONTEND_NAME }} \
+              -v /etc/timezone:/etc/timezone:ro \
+              -v /etc/localtime:/etc/localtime:ro \
               --label "traefik.http.routers.${{ env.FRONTEND_NAME }}.rule=Host(\`${{ secrets.SSH_HOST }}\`)" \
               --label "traefik.http.services.${{ env.FRONTEND_NAME }}.loadbalancer.server.port=${{ env.FRONTEND_PORT }}" \
               --network traefik-network \
