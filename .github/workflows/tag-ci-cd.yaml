@@ -1,14 +1,9 @@
-name: CI/CD
+name: tag-ci-cd
 
 on:
   push:
-    branches:
-      - "containerize"
     tags:
       - "v*.*.*"
-  pull_request:
-    branches:
-      - "containerize"
 
 env:
   DOCKER_REGISTRY_HOST: crpi-9t66pyx5tr44wo4w.cn-shanghai.personal.cr.aliyuncs.com
