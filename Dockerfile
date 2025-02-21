@@ -27,7 +27,6 @@ USER node
 COPY . .
 
 FROM deps AS dev
-EXPOSE 3000
 CMD yarn dev
 
 FROM deps AS build
@@ -36,4 +35,3 @@ RUN yarn build:prod
 FROM nginx:1.26-alpine AS prod
 COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
-EXPOSE 3000
