@@ -10,7 +10,7 @@ env:
   DOCKER_REGISTRY_NAMESPACE: lunaelf
   DOCKER_REGISTRY_REPOSITORY: ruoyi-vue3
   FRONTEND_NAME: frontend
-  FRONTEND_PORT: 3000
+  FRONTEND_PORT: 80
 
 jobs:
   build:
